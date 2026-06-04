@@ -3,11 +3,16 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from config.auth import verify_token
 from config.database import get_session
 from model.models import BubbleTea
 from model.schemas import BubbleTeaCreate, BubbleTeaRead, BubbleTeaUpdate
 
-router = APIRouter(prefix="/bubbleteas", tags=["bubbleteas"])
+router = APIRouter(
+    prefix="/bubbleteas",
+    tags=["bubbleteas"],
+    dependencies=[Depends(verify_token)],
+)
 
 
 def _serialize(item: BubbleTea) -> dict:
@@ -78,8 +83,8 @@ def delete_bubbletea(
     session: Session = Depends(get_session),
 ):
     item = session.get(BubbleTea, bubbletea_id)
-    if item is None:
+    if item is None or not item.active:
         return _not_found()
-    session.delete(item)
+    item.active = False
     session.commit()
     return {"ok": True, "results": None}
